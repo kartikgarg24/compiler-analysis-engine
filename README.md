@@ -1,125 +1,119 @@
-# 🔧 Compiler Analysis Engine
+# Compiler Analysis Engine
 
-A Python-based tool that analyzes and optimizes C code using **compiler techniques** — the same ideas used in real compilers like GCC and Clang.
-
----
-
-## 📌 What Does It Do?
-
-You give it a C program, and it:
-
-1. **Parses** the C code and builds a **Control Flow Graph (CFG)** — a map of all possible execution paths
-2. **Folds constants** — replaces expressions like `x = 5 + 3` with `x = 8` at compile time
-3. **Detects dead code** — finds code that can never run (e.g., inside `if (0) { ... }`)
-4. **Eliminates dead assignments** — removes variables assigned but never used
-5. **Runs dataflow analysis** — tracks which variables are live and which definitions reach each point
-6. **Detects loops** — identifies back edges in the CFG
-7. **Exports a visual graph** — generates a `.dot` / `.pdf` diagram of the CFG
+A Python-based static analysis and optimization tool for C programs. It applies classic compiler techniques — the same foundational ideas behind production compilers like GCC and Clang — to parse, analyze, and optimize C code at a structural level.
 
 ---
 
-## 🧠 Key Concepts (Simply Explained)
+## Overview
 
-| Term | What It Means |
+The engine takes a C source file, builds an internal representation of its control flow, and runs a series of analysis and optimization passes over it. The goal is to identify redundant computations, unreachable code, and unnecessary variable assignments — and either report or eliminate them.
+
+Specifically, the tool:
+
+1. Parses the C code and constructs a **Control Flow Graph (CFG)**, representing all possible execution paths through the program.
+2. Performs **constant folding** — evaluating constant expressions such as `x = 5 + 3` at analysis time rather than runtime.
+3. Detects **dead code** — blocks that can never be reached, for example the body of `if (0) { ... }` or `while (0) { ... }`.
+4. Eliminates **dead assignments** — variables that are assigned a value but never subsequently read.
+5. Runs **live variable analysis** and **reaching definitions analysis** across all live blocks.
+6. Detects **loops** by identifying back edges in the CFG.
+7. Exports a **visual diagram** of the full CFG, with dead nodes and edges clearly marked.
+
+---
+
+## Key Concepts
+
+| Term | Description |
 |---|---|
-| **CFG (Control Flow Graph)** | A graph where each node is a block of code and edges show what runs next |
-| **Constant Folding** | Evaluating constant expressions at analysis time, not runtime |
-| **Dead Code** | Code that can never be reached or executed |
-| **Live Variable Analysis (LVA)** | Figuring out which variables are still needed at each point |
-| **Reaching Definitions (RDA)** | Tracking where each variable was last assigned |
-| **Dead Store Elimination (DSE)** | Removing assignments to variables that are never read |
+| Control Flow Graph (CFG) | A directed graph where each node represents a basic block of statements and each edge represents a possible transfer of control |
+| Constant Folding | Replacing constant expressions with their computed values before execution |
+| Dead Code | Code that is syntactically present but can never be executed at runtime |
+| Live Variable Analysis | Determining which variables may be read after each program point |
+| Reaching Definitions | Tracking which assignment to a variable might reach a given point in the program |
+| Dead Store Elimination | Removing assignments to variables whose values are never used |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 compiler-analysis-engine/
 │
 ├── config/         # Configuration settings
-├── core/           # Core CFG builder and AST logic
-├── passes/         # Optimization passes (constant folding, DCE, etc.)
-├── utils/          # Helper utilities
-└── main.py         # Entry point — run this to analyze C code
+├── core/           # CFG builder and AST traversal logic
+├── passes/         # Optimization and analysis passes
+├── utils/          # Shared helper utilities
+└── main.py         # Entry point
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 1. Install Dependencies
+### Prerequisites
+
+Install the required Python packages:
 
 ```bash
 pip install pycparser networkx graphviz
 ```
 
-> Make sure [Graphviz](https://graphviz.org/download/) is also installed on your system for PDF export.
+Also install the [Graphviz system package](https://graphviz.org/download/) on your machine, which is required for rendering the CFG to PDF.
 
-### 2. Run the Analyzer
+### Running the Analyzer
 
 ```bash
 python main.py
 ```
 
-By default, it analyzes the example C code defined inside the script. You'll see printed output for:
-- Live Variable Analysis table
-- Reaching Definitions table  
-- Optimized block-by-block code
-- Detected loops
-- An exported CFG diagram (`optimized_cfg.pdf`)
+By default, the tool analyzes the example C program defined in the script. The output includes:
+
+- A live variable analysis table (live-in and live-out sets per block)
+- A reaching definitions table
+- Optimized code printed block by block
+- A list of detected loops
+- An exported CFG diagram saved as `optimized_cfg.pdf`
 
 ---
 
-## 📊 Example Output
+## Example
 
-Given this C code:
+Given the following C code:
+
 ```c
 int x = 10;
-if (x != 10) {   // This is always false!
+
+if (x != 10) {   // condition is always false
     int a = 5;
     printf("%d", a + 10);
 }
-while (0) {       // Never executes
+
+while (0) {       // loop body never executes
     x = x + 1;
 }
 ```
 
-The engine will:
-- Mark the `if (x != 10)` branch as **dead** (since `x` is always 10)
-- Mark the `while (0)` body as **dead** (condition is always false)
-- Remove unused variable assignments
-- Show you exactly what code survives optimization
+The engine will determine that `x` is always `10` at the `if` condition, mark the true branch as dead, and mark the entire `while (0)` body as unreachable. Dead assignments inside those blocks are then eliminated.
 
 ---
 
-## 🗺️ CFG Visualization
+## CFG Visualization
 
-After running, open `optimized_cfg.pdf` to see the full control flow graph:
-
-- **Black nodes/edges** = Live (reachable) code
-- **Red dashed nodes/edges** = Dead (unreachable) code
+After running, open `optimized_cfg.pdf` to inspect the control flow graph. Live nodes and edges are drawn in black. Dead (unreachable) nodes and edges are drawn in red with dashed lines.
 
 ---
 
-## 🔬 Optimization Passes (In Order)
+## Optimization Pipeline
+
+The passes run in the following order:
 
 ```
-1. Constant Folding     → Simplify constant expressions
-2. Mark Dead Edges      → Flag branches that can't be taken
-3. Mark Dead Nodes      → Flag blocks that can't be reached
-4. Live Variable Analysis  → Compute live-in / live-out sets
-5. Reaching Definitions    → Compute reaching def sets
-6. Dead Code Elimination   → Remove dead assignments safely
+1. Constant Folding          Evaluate and substitute constant expressions
+2. Dead Edge Marking         Flag branches whose conditions are statically false
+3. Dead Node Marking         Flag blocks unreachable from the entry point
+4. Live Variable Analysis    Compute live-in and live-out sets over live blocks
+5. Reaching Definitions      Compute reaching definition sets over live blocks
+6. Dead Code Elimination     Remove dead assignments from live blocks
 ```
 
 ---
 
-## 📄 License
-
-This project is for educational and research purposes. Feel free to explore, fork, and extend it!
-
----
-
-## 👤 Author
-
-**Kartik Garg** — [github.com/kartikgarg24](https://github.com/kartikgarg24)
